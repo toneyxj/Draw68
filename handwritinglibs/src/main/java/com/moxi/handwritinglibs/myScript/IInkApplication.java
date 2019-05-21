@@ -1,6 +1,6 @@
 // Copyright MyScript. All rights reserved.
 
-package com.moxi.writeNote.myScript;
+package com.moxi.handwritinglibs.myScript;
 
 import android.app.Application;
 

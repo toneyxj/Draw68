@@ -89,8 +89,9 @@ public class PenUtils {
      * @param x
      * @param y
      * @param pressure 压感
+     * @return 返回 true代表开始一条新的线
      */
-    public void addPoint(boolean isStart, int lineWidth, float x, float y,int scroolY,float pressure) {
+    public boolean addPoint(boolean isStart, int lineWidth, float x, float y,int scroolY,float pressure) {
         y+=scroolY;
         getWline(isStart, lineWidth);
         /**
@@ -100,7 +101,9 @@ public class PenUtils {
             addPathData();
             middleLine=null;
             addPoint(isStart,lineWidth,x,y,0,pressure);
+            return true;
         }
+        return false;
     }
 
     public long getDrawSize() {

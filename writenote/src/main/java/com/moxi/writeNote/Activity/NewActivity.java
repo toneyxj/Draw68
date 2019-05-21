@@ -29,6 +29,7 @@ import com.moxi.handwritinglibs.db.WritePadUtils;
 import com.moxi.handwritinglibs.db.index.IndexDbUtils;
 import com.moxi.handwritinglibs.listener.DeleteListener;
 import com.moxi.handwritinglibs.listener.NoteSaveWriteListener;
+import com.moxi.handwritinglibs.listener.ScriptCallBack;
 import com.moxi.handwritinglibs.listener.WindowRefureshListener;
 import com.moxi.handwritinglibs.listener.WriteTagListener;
 import com.moxi.handwritinglibs.model.CodeAndIndex;
@@ -47,9 +48,7 @@ import com.moxi.writeNote.adapter.WriteNoteBackAdapter;
 import com.moxi.writeNote.config.ActivityUtils;
 import com.moxi.writeNote.dialog.CustomPenActivity;
 import com.moxi.writeNote.dialog.PageSkipActivity;
-import com.moxi.writeNote.listener.ChangeToTextListener;
 import com.moxi.writeNote.listener.InsertLister;
-import com.moxi.writeNote.myScript.MyScriptManager;
 import com.moxi.writeNote.utils.BackPhotoUtils;
 import com.moxi.writeNote.utils.BrushSettingUtils;
 import com.moxi.writeNote.utils.DataUtuls;
@@ -164,7 +163,6 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
     private BrodcastUtils brodcastUtils;
     private InputDialog inputDialog;
 
-    private MyScriptManager scriptManager;
 
     @Override
     protected int getMainContentViewId() {
@@ -283,29 +281,7 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
                 }
             }
         });
-        scriptManager = new MyScriptManager(this, new ChangeToTextListener() {
-            @Override
-            public void onChangeFaile(String error) {
-                dialogShowOrHide(false, "");
-                if (error != null && !error.isEmpty())
-                    ToastUtils.getInstance().showToastShort(error);
-            }
 
-            @Override
-            public void onChangeSucess(String value) {
-                APPLog.e("scriptManager-onChangeSucess",System.currentTimeMillis());
-                dialogShowOrHide(false, "");
-//                write_view.setCanDraw(false, 6);
-                write_view.isdelayInit(true);
-                EditeTextActivity.startEditeTextActivity(NewActivity.this,value);
-            }
-
-            @Override
-            public void onChangeStart() {
-                APPLog.e("scriptManager-onChangeStart",System.currentTimeMillis());
-                dialogShowOrHide(true, "");
-            }
-        });
     }
 
     private Runnable runnable = new Runnable() {
@@ -493,15 +469,10 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
                 backActivity();
                 break;
             case R.id.change_to_text://文字转换
-                try {
-                    scriptManager.initMyScript(write_view);
-                    scriptManager.changeToText(write_view.getPenControl().getNoPageData());
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
+                dialogShowOrHide(true, "");
+                write_view.getTransformTxt();
                 break;
             case R.id.save_write://保存当前手写
-
                 dialogShowOrHide(true, "");
                 write_view.saveWritePad(model, new NoteSaveWriteListener() {
                     @Override
@@ -579,6 +550,8 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
                                         DbWriteModelLoader.getInstance().clearBitmap(model.saveCode, i);
                                     }
                                     fileSize = WritePadUtils.getInstance().getTemporarySize(model.saveCode);
+                                    //删除iik文件
+                                    write_view.deleteiink();
                                     initSetWriteNote(false);
                                     dialogShowOrHide(false, "");
                                     write_view.setCanDraw(true, 11);
@@ -687,10 +660,15 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
     }
 
     private boolean ischekPage = false;
+    private boolean isinitSetWriteNote = false;
 
     private void initSetWriteNote(boolean saveLast) {
         if (saveLast) {
+            //界面切换等待
+            isinitSetWriteNote = true;
+            dialogShowOrHide(true, "");
             write_view.saveWritePad(model, null);
+            return;
         }
         if (index > (fileSize - 1)) {
             index = fileSize - 1;
@@ -701,7 +679,6 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
              * 获得扩展字段信息
              */
             String extent = WritePadUtils.getInstance().getExtent(model.saveCode, index);
-            APPLog.e("extent=" + extent);
             //更换赋值给
             model.extend = extent;
             ExtendModel model = DataUtils.getExtendModel(extent);
@@ -720,6 +697,60 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         show_index.setText(String.valueOf(index + 1) + "/" + String.valueOf(fileSize));
         ischekPage = false;
     }
+
+    /**
+     * myscript翻译回调
+     */
+    private ScriptCallBack scriptCallBack = new ScriptCallBack() {
+        @Override
+        public void saveResult() {
+            if (isfinish) return;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    dialogShowOrHide(false, "");
+                    //判断是否是翻页
+                    if (isinitSetWriteNote) {
+                        initSetWriteNote(false);
+                        isinitSetWriteNote = false;
+                    }
+                    if (isBackActivity){
+                        isBack=true;
+                        backSave();
+                        isBackActivity=false;
+                    }
+                }
+            });
+
+        }
+
+        @Override
+        public void transformReuslit(final String txt) {
+            if (isfinish) return;
+            getHandler().post(new Runnable() {
+                @Override
+                public void run() {
+                    dialogShowOrHide(false, "");
+                    write_view.isdelayInit(true);
+                    EditeTextActivity.startEditeTextActivity(NewActivity.this, txt);
+                }
+            });
+
+        }
+
+        @Override
+        public void scriptFail(final String fail) {
+            if (isfinish) return;
+            getHandler().post(new Runnable() {
+                @Override
+                public void run() {
+                    dialogShowOrHide(false, "");
+                    ToastUtils.getInstance().showToastShort(fail);
+                }
+            });
+
+        }
+    };
 
     private void toPage() {
         write_view.setCanDraw(false, 100011);
@@ -1044,6 +1075,10 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         backActivity();
     }
 
+    private boolean isBackActivity=false;
+    private boolean isBack = false;
+    private WritPadModel backModel = null;
+
     private void backActivity() {
         write_view.setCanDraw(false, 113);
 //        write_view.setleaveScribbleMode(false, 0);
@@ -1052,6 +1087,9 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         if (noAllPageReplaceStyle == 0) {
             ii = -1;
         }
+          isBack = false;
+          backModel = null;
+        isBackActivity=true;
         new Thread(new UpdateDrawBackTheard(model.saveCode, ii, model.extend, new UpdateDrawBackTheard.UpdateListener() {
             @Override
             public void onResult() {
@@ -1063,17 +1101,23 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
                     @Override
                     public void isSucess(boolean is, WritPadModel model) {
                         if (isfinish) return;
-                        dialogShowOrHide(false, "保存中...");
-                        if (write_view.onepageChange) {
-                            DbPhotoLoader.getInstance().clearBitmap(model.saveCode, 0);
-                            LoadLocPhotoUtils.removePic(model.saveCode, 0);
-                        }
-                        NewActivity.this.finish();
+                        backModel=model;
+                        backSave();
                     }
                 });
             }
         })).start();
 
+    }
+    private void backSave(){
+        if (isBack&&backModel!=null){
+            dialogShowOrHide(false, "保存中...");
+            if (write_view.onepageChange) {
+                DbPhotoLoader.getInstance().clearBitmap(model.saveCode, 0);
+                LoadLocPhotoUtils.removePic(model.saveCode, 0);
+            }
+            NewActivity.this.finish();
+        }
     }
 
     @Override
@@ -1087,7 +1131,6 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         super.onDestroy();
         write_view.setleaveScribbleMode(false, 1000);
         brodcastUtils.destory();
-        scriptManager.remove();
     }
 
     @Override
@@ -1137,6 +1180,7 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
             getHandler().removeCallbacksAndMessages(null);
             isShowPopWindows = false;
             write_view.setCanDraw(true, 23);
+            write_view.setCallBack(scriptCallBack);
         } else {
             write_view.setCanDraw(false, 24);
         }

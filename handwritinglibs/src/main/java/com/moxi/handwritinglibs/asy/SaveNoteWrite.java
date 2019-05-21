@@ -37,6 +37,7 @@ public class SaveNoteWrite extends AsyncTask<String, Void, Boolean> {
     }
     public SaveNoteWrite(WritPadModel model, WritePageData data,NoteSaveWriteListener listener) {
         this.model=new WritPadModel(model.name,model.saveCode,model.isFolder,model.parentCode,model._index,model.extend);
+       APPLog.e("SaveNoteWrite",model.toString());
         this.data=data;
         this.listener=listener;
         this.upListener=null;

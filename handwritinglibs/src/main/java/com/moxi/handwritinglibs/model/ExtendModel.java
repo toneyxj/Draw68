@@ -48,4 +48,19 @@ public class ExtendModel {
      * 自定义背景设置背景文件路径
      */
     public  String backgroundFilePath="";
+    /**
+     * myscript保存jiix文件名称
+     */
+    public String scriptSavePath="";
+
+    @Override
+    public String toString() {
+        return "ExtendModel{" +
+                "background=" + background +
+                ", encryptPass='" + encryptPass + '\'' +
+                ", noAllPageReplaceStyle=" + noAllPageReplaceStyle +
+                ", backgroundFilePath='" + backgroundFilePath + '\'' +
+                ", scriptSavePath='" + scriptSavePath + '\'' +
+                '}';
+    }
 }

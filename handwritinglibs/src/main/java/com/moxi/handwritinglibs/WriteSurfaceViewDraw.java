@@ -9,7 +9,9 @@ import com.moxi.handwritinglibs.asy.SaveNoteWrite;
 import com.moxi.handwritinglibs.db.WritPadModel;
 import com.moxi.handwritinglibs.listener.DbWritePathListener;
 import com.moxi.handwritinglibs.listener.NoteSaveWriteListener;
+import com.moxi.handwritinglibs.listener.ScriptCallBack;
 import com.moxi.handwritinglibs.model.CodeAndIndex;
+import com.moxi.handwritinglibs.model.ExtendModel;
 import com.moxi.handwritinglibs.model.WriteModel.WritePageData;
 import com.moxi.handwritinglibs.utils.DbWriteModelLoader;
 import com.mx.mxbase.constant.APPLog;
@@ -25,6 +27,9 @@ public class WriteSurfaceViewDraw extends BaseSurfaceViewDraw {
     Handler handler=new Handler();
     private int  thisIndex=0;
     private boolean isfinish=false;
+
+
+
     public WriteSurfaceViewDraw(Context context) {
         super(context);
     }
@@ -32,6 +37,7 @@ public class WriteSurfaceViewDraw extends BaseSurfaceViewDraw {
     public WriteSurfaceViewDraw(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
+
     public void setSaveCode(final String saveCode, final int index) {
 //        setCanDraw(false,100001);
         if (getPenControl()==null||getPenControl().tagListener==null||!isStart){
@@ -53,9 +59,10 @@ public class WriteSurfaceViewDraw extends BaseSurfaceViewDraw {
             public void onLoaderSucess(String saveCodea, int index, WritePageData bitmap) {
                 if (thisIndex==index&&!isfinish) {
                     getPenControl().setTagListenerBack("",false);
-                    APPLog.e("获取到了信息"+System.currentTimeMillis());
                     getPenControl().setPageData(bitmap);
                     getPenControl().setleaveScribble();
+                    scriptManager.setCodeAndIndex(new CodeAndIndex(saveCode,index));
+                    scriptManager.setExistJiix(bitmap.dataNull());
                 }
             }
         });
@@ -74,6 +81,7 @@ public class WriteSurfaceViewDraw extends BaseSurfaceViewDraw {
             if (listener!=null){
                 listener.isSucess(true,model);
             }
+            if (getScriptCallBack()!=null)getScriptCallBack().saveResult();
             return;
         }
         getPenControl().setCross(false);
@@ -85,8 +93,14 @@ public class WriteSurfaceViewDraw extends BaseSurfaceViewDraw {
         if (model._index==0){
             onepageChange=true;
         }
+        ExtendModel extendModel=model.getExtendModel();
+        if (extendModel!=null){
+            extendModel.scriptSavePath=scriptManager.savename;
+            model.setExtend(extendModel);
+        }
         //异步线程修改保存图片数据信息
         new SaveNoteWrite(model,pageData,listener).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        scriptManager.saveJiix();
     }
     @Override
     protected void onDetachedFromWindow() {

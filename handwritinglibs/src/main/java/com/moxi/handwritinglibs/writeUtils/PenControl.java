@@ -7,11 +7,13 @@ import android.graphics.Matrix;
 import android.graphics.PorterDuff;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.View;
 import android.xrz.Xrzhandwrite;
 
+import com.moxi.handwritinglibs.listener.MyScriptDrawListener;
 import com.moxi.handwritinglibs.listener.WindowRefureshListener;
 import com.moxi.handwritinglibs.listener.WriteTagListener;
 import com.moxi.handwritinglibs.model.WriteModel.WLine;
@@ -22,6 +24,9 @@ import com.moxi.handwritinglibs.utils.WriteRunable;
 import com.mx.mxbase.constant.APPLog;
 import com.mx.mxbase.utils.Log;
 import com.mx.mxbase.utils.StringUtils;
+import com.myscript.iink.PointerEvent;
+import com.myscript.iink.PointerEventType;
+import com.myscript.iink.PointerType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -105,8 +110,19 @@ public class PenControl implements View.OnTouchListener {
     private int canvasHeight = 0;
     private MyHandler handler;
     private List<String> clickTests = new ArrayList<String>();
-    private boolean isAddBacking=false;
-    private boolean notToDraw=false;
+    private boolean isAddBacking = false;
+    private boolean notToDraw = false;
+    //手写绘制交互
+    private MyScriptDrawListener myScriptDrawListener;
+    private long eventTimeOffset;
+    List<PointerEvent> eventList;
+    final long NO_TIMESTAMP = -1;
+    final float NO_PRESSURE = 0.0f;
+    final int NO_POINTER_ID = -1;
+
+    public void setMyScriptDrawListener(MyScriptDrawListener listener) {
+        myScriptDrawListener = listener;
+    }
 
 
     public List<String> getClickTests() {
@@ -153,11 +169,12 @@ public class PenControl implements View.OnTouchListener {
 
     public void setScroolY(int scroolY) {
         this.scroolY = scroolY;
-        haveDraw=false;
+        haveDraw = false;
         surfaceDraw(1);
         canDraw = false;
         onScrool(true);
     }
+
     public void setDefaultScrollTo() {
         this.scroolY = 0;
     }
@@ -176,13 +193,14 @@ public class PenControl implements View.OnTouchListener {
         this.backIsTran = backIsTran;
         surfaceDraw(2);
     }
-    private boolean setNewDraw=false;
+
+    private boolean setNewDraw = false;
 
     public void setBackgroundDraw(boolean backgroundDraw, Bitmap bitmap) {
         isBackgroundDraw = backgroundDraw;
         backBitmap = bitmap;
         haveDraw = false;
-        setNewDraw=true;
+        setNewDraw = true;
         surfaceDraw(3);
     }
 
@@ -202,12 +220,12 @@ public class PenControl implements View.OnTouchListener {
      * @param drawStyle
      * @param filepath
      */
-    public void setDrawStyle(int drawStyle, String filepath,boolean ischekPage) {
+    public void setDrawStyle(int drawStyle, String filepath, boolean ischekPage) {
         this.filepath = filepath;
         this.drawStyle = drawStyle;
 //        haveDraw=false;
         if (!ischekPage)
-        surfaceDraw(5);
+            surfaceDraw(5);
     }
 
     public void setRefureshListener(WindowRefureshListener refureshListener) {
@@ -258,6 +276,9 @@ public class PenControl implements View.OnTouchListener {
 
 
     public PenControl(final SurfaceView surfaceView) {
+        long rel_t = SystemClock.uptimeMillis();
+        long abs_t = System.currentTimeMillis();
+        eventTimeOffset = abs_t - rel_t;
         this.surfaceView = surfaceView;
         this.surfaceView.setOnTouchListener(this);
         handler = new MyHandler(this);
@@ -266,21 +287,21 @@ public class PenControl implements View.OnTouchListener {
     /**
      * 延时加载
      */
-    public boolean isdelayInit=false;
+    public boolean isdelayInit = false;
+
     /**
      * 初始化手写控件
      */
     public void init_handwrite() {
-        if (isdelayInit){
-            isdelayInit=false;
+        if (isdelayInit) {
+            isdelayInit = false;
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     init_handwrite();
                 }
-            },150);
-        }
-        else {
+            }, 150);
+        } else {
             init_handwriteC();
             if (pageData != null && haveDraw) {
                 haveDraw = false;
@@ -289,11 +310,13 @@ public class PenControl implements View.OnTouchListener {
         }
 
     }
-    private void init_handwriteC(){
+
+    private void init_handwriteC() {
         int viewPosition[] = {0, 0};
         surfaceView.getLocationOnScreen(viewPosition);
         Xrzhandwrite.xrzenablePost(surfaceView.getHolder().getSurface(), viewPosition[0], viewPosition[1], surfaceView.getWidth(), surfaceView.getHeight());
     }
+
     private float lastX;
     private float lastY;
 
@@ -311,13 +334,14 @@ public class PenControl implements View.OnTouchListener {
     @Override
     public boolean onTouch(View view, MotionEvent event) {
         if (!canDraw) return false;
-        if (isDrawing)return false;
-        if (notToDraw)return false;
+        if (isDrawing) return false;
+        if (notToDraw) return false;
 //        if (MotionEvent.ACTION_DOWN == event.getAction() || MotionEvent.ACTION_POINTER_DOWN == event.getAction()) {
 //            lastPressure = 0;
 //            setEnterScribble();
 //            noDraw(false);
 //        }
+        final int pointerIndex = (event.getAction() & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
         int iDeviceId = event.getDeviceId();
         int tooolType = event.getToolType(0);
         if (iDeviceId == 2 || tooolType == 1) return true;//手指接触屏幕
@@ -339,6 +363,7 @@ public class PenControl implements View.OnTouchListener {
         }
 
         switch (event.getAction()) {
+            case MotionEvent.ACTION_POINTER_DOWN:
             case MotionEvent.ACTION_DOWN:
 
                 if (clickTests.size() > 15) {
@@ -349,6 +374,8 @@ public class PenControl implements View.OnTouchListener {
                 if (!isDrawLine) {
                     setDeleteRect(event, eventX, eventY);
                 } else {
+                    eventList = new ArrayList<PointerEvent>();
+                    eventList.add(new PointerEvent(PointerEventType.DOWN, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
                     pointDraw(eventX, eventY, true, lastPressure);
                     thisPenUtils().addPoint(true, lineWidth, eventX, eventY, scroolY, lastPressure);
                     drawUp = false;
@@ -366,15 +393,16 @@ public class PenControl implements View.OnTouchListener {
                         float historicalX = event.getHistoricalX(i);
                         float historicalY = event.getHistoricalY(i);
                         pointDraw(historicalX, historicalY, false, lastPressure);
-                        thisPenUtils().addPoint(false, lineWidth, historicalX, historicalY, scroolY, lastPressure);
+                        movePoint(eventX, eventY);
                         lastPressure = PenUtils.getPressure(pressure, lastPressure, lineWidth);
                     }
                     pointDraw(eventX, eventY, false, lastPressure);
-                    thisPenUtils().addPoint(false, lineWidth, eventX, eventY, scroolY, lastPressure);
+                    movePoint(eventX, eventY);
                 } else {
                     setDeleteRect(event, eventX, eventY);
                 }
                 break;
+            case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
                 lastX = 0;
@@ -387,6 +415,9 @@ public class PenControl implements View.OnTouchListener {
                     thisPenUtils().addPathData();//添加数据进入队列
                     noDraw(true);
                     drawUp = true;
+                    eventList.add(new PointerEvent(PointerEventType.UP, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
+                    //通知转换
+                    if (myScriptDrawListener != null) myScriptDrawListener.onPenEvents(eventList);
                 } else {//启动删除
                     canDraw = false;
                     setDeleteRect(event, eventX, eventY);
@@ -400,6 +431,19 @@ public class PenControl implements View.OnTouchListener {
         lastX = eventX;
         lastY = eventY;
         return true;
+    }
+
+    private void movePoint(float eventX, float eventY) {
+        if (thisPenUtils().addPoint(false, lineWidth, eventX, eventY, scroolY, lastPressure)) {
+            eventList.add(new PointerEvent(PointerEventType.UP, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
+            //通知转换
+            if (myScriptDrawListener != null) myScriptDrawListener.onPenEvents(eventList);
+            //同时线作为起始点
+            eventList=new ArrayList<PointerEvent>();
+            eventList.add(new PointerEvent(PointerEventType.DOWN, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
+        }else {
+            eventList.add(new PointerEvent(PointerEventType.MOVE, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
+        }
     }
 
 
@@ -489,7 +533,7 @@ public class PenControl implements View.OnTouchListener {
     public boolean isOnDraw() {
         try {
             return Xrzhandwrite.xrzGethandwritestate() != 0;
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
@@ -501,7 +545,7 @@ public class PenControl implements View.OnTouchListener {
     public void setleaveScribble() {
         try {
             Xrzhandwrite.xrzEnterOrleave(0);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -515,40 +559,40 @@ public class PenControl implements View.OnTouchListener {
     }
 
     public boolean haveDraw = true;
-    private boolean isDrawing=true;
-    private WriteRunable runable=null;
+    private boolean isDrawing = true;
+    private WriteRunable runable = null;
 
     private void surfaceDraw(int index) {
         setleaveScribble();
-        APPLog.e("PenControl-surfaceDraw1",index);
+        APPLog.e("PenControl-surfaceDraw1", index);
         if (haveDraw) return;
         haveDraw = true;
-        APPLog.e("PenControl-surfaceDraw2",index);
-        if (runable!=null){
+        APPLog.e("PenControl-surfaceDraw2", index);
+        if (runable != null) {
             runable.setFinish(true);
         }
         canDraw = false;
-        isDrawing=true;
-        setTagListenerBack(PenUtils.getDrawHitn(index),false);
+        isDrawing = true;
+        setTagListenerBack(PenUtils.getDrawHitn(index), false);
         final List<WLine> lines = thisPenUtils().getDrawPaths(scroolY);
-        runable= new WriteRunable() {
+        runable = new WriteRunable() {
             @Override
             public void run() {
-                doubleDraw(this,lines, false, false, true);
-                doubleDraw(this,lines, false, false, false);
-                if (runable!=null&&this.isFinish())return;
+                doubleDraw(this, lines, false, false, true);
+                doubleDraw(this, lines, false, false, false);
+                if (runable != null && this.isFinish()) return;
                 setCanDraw(true);
-                isDrawing=false;
-                setTagListenerBack("",true);
+                isDrawing = false;
+                setTagListenerBack("", true);
                 APPLog.e("手写刷新完成");
-                setNewDraw=false;
+                setNewDraw = false;
             }
         };
-         new Thread(runable).start();
+        new Thread(runable).start();
     }
 
-    public void setTagListenerBack(final String tag, boolean toMain){
-        if (tagListener==null)return;
+    public void setTagListenerBack(final String tag, boolean toMain) {
+        if (tagListener == null) return;
         if (toMain) {
             handler.post(new Runnable() {
                 @Override
@@ -556,7 +600,7 @@ public class PenControl implements View.OnTouchListener {
                     tagListener.WriteTag(isDrawing, tag);
                 }
             });
-        }else {
+        } else {
             tagListener.WriteTag(isDrawing, tag);
         }
     }
@@ -565,13 +609,13 @@ public class PenControl implements View.OnTouchListener {
         return canDraw;
     }
 
-    public void doubleDraw(WriteRunable runable,List<WLine> lines, final boolean isfull, boolean isDelete, boolean first) {
-        if (runable!=null&&runable.isFinish())return;
+    public void doubleDraw(WriteRunable runable, List<WLine> lines, final boolean isfull, boolean isDelete, boolean first) {
+        if (runable != null && runable.isFinish()) return;
         if (refureshListener != null)
             refureshListener.onDrawDelete(isDelete);
         Canvas mCanvas = surfaceView.getHolder().lockCanvas();
         if (mCanvas == null) return;
-        drawPage(runable,mCanvas, lines, isDelete, false, first);
+        drawPage(runable, mCanvas, lines, isDelete, false, first);
 //        new CustomThread( surfaceView.getHolder(),lines,isDelete).start();
 
         surfaceView.getHolder().unlockCanvasAndPost(mCanvas);
@@ -589,6 +633,7 @@ public class PenControl implements View.OnTouchListener {
             }
         });
     }
+
     /**
      * 获得绘制界面的图片并
      *
@@ -599,7 +644,7 @@ public class PenControl implements View.OnTouchListener {
         int h = canvasHeight <= maxHeight ? maxHeight : canvasHeight;
         Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        drawPage(null,canvas, null, false, true, false);
+        drawPage(null, canvas, null, false, true, false);
         return bitmap;
     }
 
@@ -609,8 +654,8 @@ public class PenControl implements View.OnTouchListener {
      * @param mCanvas
      * @param lines
      */
-    private void drawPage(WriteRunable runable,Canvas mCanvas, List<WLine> lines, boolean isDelete, boolean getpic, boolean isfirst) {
-        if (runable!=null&&runable.isFinish())return;
+    private void drawPage(WriteRunable runable, Canvas mCanvas, List<WLine> lines, boolean isDelete, boolean getpic, boolean isfirst) {
+        if (runable != null && runable.isFinish()) return;
         if (mCanvas == null) return;
         int width = maxwidth;
         int height = maxHeight;
@@ -621,21 +666,22 @@ public class PenControl implements View.OnTouchListener {
 
         if (isBackgroundDraw) {
             if (backIsTran) {
-                if (runable!=null&&runable.isFinish())return;;
+                if (runable != null && runable.isFinish()) return;
+                ;
                 mCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             } else {
-                if (runable!=null&&runable.isFinish())return;
+                if (runable != null && runable.isFinish()) return;
                 mCanvas.drawColor(Color.WHITE);
                 if (utils == null) {
                     utils = new PaintBackUtils();
                 }
                 utils.setWidthAndHeight(surfaceView.getContext(), height, width);
-                if (runable!=null&&runable.isFinish())return;
+                if (runable != null && runable.isFinish()) return;
                 utils.DrawView(mCanvas, drawStyle, filepath);
             }
         } else {
             if (isDelete) {
-                if (runable!=null&&runable.isFinish())return;
+                if (runable != null && runable.isFinish()) return;
                 mCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             } else {
                 if (null == backBitmap || backBitmap.isRecycled()) {
@@ -659,17 +705,17 @@ public class PenControl implements View.OnTouchListener {
                     int left = ((width - w) > 0 ? (width - w) : 0) / 2;
                     int top = ((height - h) > 0 ? (height - h) : 0) / 2;
                     matrix.postTranslate(left, top);
-                    if (runable!=null&&runable.isFinish())return;
+                    if (runable != null && runable.isFinish()) return;
                     mCanvas.drawBitmap(backBitmap, matrix, PenUtils.getPaint(lineWidth));
                 }
             }
         }
-        if (runable!=null&&runable.isFinish())return;
+        if (runable != null && runable.isFinish()) return;
         if (lines == null) {
             lines = thisPenUtils().getDrawPaths(scroolY);
         }
         for (WLine p : lines) {
-            if (runable!=null&&runable.isFinish())return;
+            if (runable != null && runable.isFinish()) return;
             if (getpic || scroolY == 0) {
                 p.drawCanvas(mCanvas);
             } else {
@@ -690,8 +736,9 @@ public class PenControl implements View.OnTouchListener {
         }
         return null;
     }
+
     public WritePageData getNoPageData() {
-            return thisPenUtils().getPageData();
+        return thisPenUtils().getPageData();
     }
 
     public void ondestory() {

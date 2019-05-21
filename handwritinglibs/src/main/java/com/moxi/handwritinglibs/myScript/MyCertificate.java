@@ -1,4 +1,4 @@
-package com.moxi.writeNote.myScript;
+package com.moxi.handwritinglibs.myScript;
 
 /**
  * The <code>MyCertificate</code> class provides the bytes of the user

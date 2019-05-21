@@ -24,5 +24,6 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     androidTestImplementation 'junit:junit:4.12'
     api project(':mxbase')
+    api "com.myscript:iink:1.3.1"
 
 }

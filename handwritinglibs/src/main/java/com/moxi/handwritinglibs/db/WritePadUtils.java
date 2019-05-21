@@ -489,7 +489,6 @@ public class WritePadUtils {
             if (imagecur.moveToNext()) {
                 imageContent = imagecur.getString(0);
             }
-            APPLog.e("getImageContent:"+imageContent);
             imagecur.close();
         }catch (Exception e){
             e.printStackTrace();

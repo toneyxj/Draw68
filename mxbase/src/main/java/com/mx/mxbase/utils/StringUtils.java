@@ -85,6 +85,23 @@ public class StringUtils {
         return filePath;
     }
     /**
+     * 保存自定义背景文件夹
+     * @return
+     */
+    public static String getWriteNoteScriptPath(){
+       String filePath= StringUtils.getSDPath();
+        if (StringUtils.isNull(filePath)){
+            ToastUtils.getInstance().showToastShort("无法获取储存卡");
+            return "";
+        }
+        filePath+="script/";
+        File file=new File(filePath);
+        if (!file.exists()){
+            file.mkdirs();
+        }
+        return filePath;
+    }
+    /**
      * 获取sd卡路径
      *
      * @return 返回路径
