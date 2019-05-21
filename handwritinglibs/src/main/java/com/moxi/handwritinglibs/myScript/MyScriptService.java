@@ -7,6 +7,7 @@ import android.util.DisplayMetrics;
 import com.google.gson.Gson;
 import com.moxi.handwritinglibs.myScript.utils.FontMetricsProvider;
 import com.moxi.handwritinglibs.myScript.utils.JiixForChars;
+import com.moxi.handwritinglibs.utils.StringUtils;
 import com.mx.mxbase.constant.APPLog;
 import com.myscript.iink.Configuration;
 import com.myscript.iink.ContentPackage;
@@ -81,7 +82,7 @@ public class MyScriptService {
 
     }
 
-    public boolean setPackage(Context context,String name){
+    public boolean setPackage(Context context,String midr,String name){
         if (editor!=null)
             editor.clear();
         if (package1!=null) {
@@ -90,9 +91,12 @@ public class MyScriptService {
         if (part != null) {
             part.close();
         }
-        APPLog.e("setPackage","进入");
+
         String packageName = name+".iink";
-        File file = new File(context.getFilesDir(), packageName);
+        File dmid = new File(context.getFilesDir(), midr);
+        if (!dmid.exists())dmid.mkdirs();
+        File file=new File(dmid,packageName);
+        APPLog.e("setPackage",file.getAbsoluteFile());
         boolean res=file.exists();
         package1 = null;
         try {
@@ -114,12 +118,16 @@ public class MyScriptService {
         return res;
     }
 
-    public void delete(Context context,String name){
+    public void delete(Context context,String midr,String name){
         String packageName = name+".iink";
-        File file = new File(context.getFilesDir(), packageName);
+        File dmid = new File(context.getFilesDir(), midr);
+        if (!dmid.exists())dmid.mkdirs();
+        File file=new File(dmid,packageName);
+        APPLog.e("setPackage",file.getAbsoluteFile());
         if (file.exists())
         file.delete();
     }
+
 
     public void savePacke(){
         if (package1==null)return;

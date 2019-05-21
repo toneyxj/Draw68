@@ -6,6 +6,7 @@ import android.util.Log;
 import com.moxi.handwritinglibs.db.WritPadModel;
 import com.moxi.handwritinglibs.db.index.IndexDbUtils;
 import com.moxi.handwritinglibs.listener.DeleteListener;
+import com.moxi.handwritinglibs.myScript.ScriptManager;
 
 import org.litepal.crud.DataSupport;
 
@@ -30,7 +31,9 @@ public class DeleteFilesAsy extends AsyncTask<String, Void, Boolean> {
         StringBuilder builder = new StringBuilder();
         StringBuilder indexBuilder = new StringBuilder();
         for (int i = 0; i < isSelects.size(); i++) {
+
             WritPadModel model = isSelects.get(i);
+            ScriptManager.deleteBySaveCode(model.saveCode);
             if (model.isFolder == 0) {
                 if (i != 0) {
                     builder.append(" or ");

@@ -17,6 +17,7 @@ import com.moxi.handwritinglibs.model.WriteModel.WMoreLine;
 import com.moxi.handwritinglibs.model.WriteModel.WPoint;
 import com.moxi.handwritinglibs.model.WriteModel.WritePageData;
 import com.moxi.handwritinglibs.utils.JiixLoaderManager;
+import com.mx.mxbase.base.MyApplication;
 import com.mx.mxbase.constant.APPLog;
 import com.mx.mxbase.utils.Base64Utils;
 import com.mx.mxbase.utils.FileUtils;
@@ -110,29 +111,17 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      * @return
      */
     public String getScriptSavePath() {
-//        String path = StringUtils.getWriteNoteScriptPath() +codeAndIndex.saveCode;
-//        File file = new File(path);
-//        if (!file.exists()) {
-//            file.mkdirs();
-//        }
-//        File sf = new File(file,
-//                savename);
-//        if (!existJiix) existJiix = sf.exists();
-//        APPLog.e( sf.getAbsolutePath());
-//        APPLog.e("保存路径=" + sf.getAbsolutePath());
-//        APPLog.e("是否存在=" + existJiix);
-//        return sf.getAbsolutePath();
         return savename;
     }
 
     public void deleteiink(){
         String path = getScriptSavePath();
-        scriptService.setPackage(context,path);
+        scriptService.setPackage(context,codeAndIndex.saveCode,path);
     }
 
     public void loadJiix() {
         String path = getScriptSavePath();
-        existJiix=scriptService.setPackage(context,path);
+        existJiix=scriptService.setPackage(context,codeAndIndex.saveCode,path);
 //        JiixLoaderManager.getInstance().loding(path, this);
     }
 
@@ -173,7 +162,12 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      * @return 如果当前已有jiix文件返回true
      */
     public boolean getTransformTxt() {
-        if (!existJiix) return false;
+        APPLog.e("existJiix",existJiix);
+        if (!existJiix) {
+            engControlType = 2;
+            return false;
+        }
+        APPLog.e("scriptService.isIdle()",scriptService.isIdle());
         if (scriptService.isIdle()) {
             try {
                 if (callBack != null) callBack.transformReuslit(scriptService.change());
@@ -322,18 +316,39 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
         } catch (Exception e) {
             APPLog.e("contentChanged", e.getMessage());
         }
-        if (scriptService.isIdle()) {
-            setExistJiix(true);
+
+        APPLog.e("engControlType",engControlType);
+//        if (scriptService.isIdle()) {
             switch (engControlType) {
                 case 0://保存
                 case 1://切换界面
-                    saveJiix();
+                    if (existJiix) {
+                        saveJiix();
+                    }else {
+                        setExistJiix(true);
+                        callBack.saveResult();
+                    }
                     break;
                 case 2://翻译手写内容
-                    getTransformTxt();
+                    if (existJiix){
+                        getTransformTxt();
+                    }else {
+                        setExistJiix(true);
+                        if (callBack != null) {
+                            try {
+                                callBack.transformReuslit(scriptService.change());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+
                     break;
             }
-        }
+//        }
     }
 
     @Override
@@ -381,5 +396,9 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
 //            APPLog.e("onLoaderSucess",data);
 //            scriptService.loadJiix(data);
 //        }
+    }
+
+    public static void deleteBySaveCode(String saveCode){
+        com.mx.mxbase.utils.StringUtils.deleteFile(new File(MyApplication.getInstance().getFilesDir(), saveCode));
     }
 }

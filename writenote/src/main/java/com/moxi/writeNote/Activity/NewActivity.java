@@ -441,7 +441,6 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         }
     }
 
-
     @Override
     public void onClick(View v) {
         if (isOnDrawing() && !iswuliClick) return;
@@ -727,9 +726,11 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         @Override
         public void transformReuslit(final String txt) {
             if (isfinish) return;
-            getHandler().post(new Runnable() {
+            APPLog.e("翻译来了");
+            runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    APPLog.e("翻译来了11");
                     dialogShowOrHide(false, "");
                     write_view.isdelayInit(true);
                     EditeTextActivity.startEditeTextActivity(NewActivity.this, txt);
