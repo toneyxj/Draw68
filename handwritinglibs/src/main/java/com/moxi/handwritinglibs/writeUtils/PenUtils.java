@@ -132,7 +132,10 @@ public class PenUtils {
             }
         }
     }
-
+public List<WLine> deleteLines=new ArrayList<WLine>();
+    public void newDelete(){
+        deleteLines=new ArrayList<WLine>();
+    }
     /**
      * 添加删除线
      *
@@ -143,6 +146,7 @@ public class PenUtils {
         backOrLastIndex =0;
         nullInit();
         cutSaveData();
+        deleteLines.addAll(lines);
         pageData.drawMiddleLines.add(new WMoreLine(lines, 1));
     }
 
@@ -179,12 +183,12 @@ public class PenUtils {
     /**
      * 撤销
      */
-    public void lastStep() {
+    public WMoreLine lastStep() {
         nullInit();
-        if (backOrLastIndex >= 29) return;
-        if (pageData.drawMiddleLines.size() <= 0) return;
+        if (backOrLastIndex >= 29) return null;
+        if (pageData.drawMiddleLines.size() <= 0) return null;
         int size = pageData.drawMiddleLines.size() - 1 - backOrLastIndex;
-        if (size < 0) return;
+        if (size < 0) return null;
         boolean isLine=pageData.drawMiddleLines.get(size).ChangeLineStatus();
         List<WLine> lines=pageData.drawMiddleLines.get(size).getMoreLines();
         int mSize=lines.size();
@@ -200,24 +204,28 @@ public class PenUtils {
             backOrLastIndex++;
         }
         APPLog.e("all size=" + pageData.drawMiddleLines.size(), "index size is " + size + "   backOrLastIndex is " + backOrLastIndex);
+        return pageData.drawMiddleLines.get(size);
     }
 
     /**
      * 返回
      */
-    public void nextStep() {
+    public WMoreLine nextStep() {
         nullInit();
         int size = pageData.drawMiddleLines.size();
 
-        if (size <= 0) return;
+        if (size <= 0) return null;
         if (backOrLastIndex <= 0) {
-            return;
+            return null;
         }
         int dd = size - backOrLastIndex;
         backOrLastIndex--;
-        if (dd >= size) return;
-        pageData.drawMiddleLines.get(dd).ChangeLineStatus();
+        if (dd >= size) return null;
+        WMoreLine line= pageData.drawMiddleLines.get(dd);
+        line.ChangeLineStatus();
         APPLog.e("all size=" + pageData.drawMiddleLines.size(), "index size is " + dd + "    backOrLastIndex is " + backOrLastIndex);
+       return line;
+
     }
 
     /**

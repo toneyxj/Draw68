@@ -726,7 +726,6 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
         @Override
         public void transformReuslit(final String txt) {
             if (isfinish) return;
-            APPLog.e("翻译来了");
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

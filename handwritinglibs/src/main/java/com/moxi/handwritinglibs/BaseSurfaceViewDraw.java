@@ -14,6 +14,8 @@ import com.moxi.handwritinglibs.listener.ScriptCallBack;
 import com.moxi.handwritinglibs.listener.WindowRefureshListener;
 import com.moxi.handwritinglibs.listener.WriteTagListener;
 import com.moxi.handwritinglibs.model.CodeAndIndex;
+import com.moxi.handwritinglibs.model.WriteModel.WLine;
+import com.moxi.handwritinglibs.model.WriteModel.WMoreLine;
 import com.moxi.handwritinglibs.myScript.MyScriptService;
 import com.moxi.handwritinglibs.myScript.ScriptManager;
 import com.moxi.handwritinglibs.utils.DbWriteModelLoader;
@@ -134,8 +136,9 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
     }
 
     public void getTransformTxt() {
+        if (scriptManager==null)return;
         if (!scriptManager.getTransformTxt()) {
-            scriptManager.addCoordinate(getPenControl().getNoPageData());
+            scriptManager.addCoordinate(getPenControl().getNoPageData(),true);
         }
     }
 
@@ -204,12 +207,20 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
     public void backLastDraw(boolean is) {
         if (getPenControl() == null) return;
         APPLog.e("backLastDraw  is", is);
+        WMoreLine line=null;
         if (is) {
-            getPenControl().thisPenUtils().lastStep();
+            line=getPenControl().thisPenUtils().lastStep();
         } else {
-            getPenControl().thisPenUtils().nextStep();
+            line= getPenControl().thisPenUtils().nextStep();
         }
         getPenControl().refureshWindows(false);
+        if (line!=null){
+            if (line.isLineStatus()){
+                scriptManager.DrawLine(line.getMoreLines());
+            }else {
+                onRubber(line.getMoreLines());
+            }
+        }
     }
 
     public void setleaveScribbleMode(boolean is, int index) {
@@ -331,5 +342,15 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
         //拥有jiix文件代表引擎可以进行快速识别
         if (scriptManager!=null)
         scriptManager.pointerEvents(eventList);
+    }
+
+    @Override
+    public void onRubber(List<WLine> lines) {
+        scriptManager.clear();
+        scriptManager.deleteiink();
+        scriptManager.existJiix=false;
+//        scriptManager.clear();
+//        scriptManager.addCoordinate(getPenControl().getNoPageData(),false);
+//        scriptManager.deleteiink();
     }
 }

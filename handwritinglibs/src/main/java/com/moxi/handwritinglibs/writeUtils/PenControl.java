@@ -372,6 +372,7 @@ public class PenControl implements View.OnTouchListener {
 //                clickTests.add(value);
 
                 if (!isDrawLine) {
+                    thisPenUtils().newDelete();
                     setDeleteRect(event, eventX, eventY);
                 } else {
                     eventList = new ArrayList<PointerEvent>();
@@ -425,6 +426,7 @@ public class PenControl implements View.OnTouchListener {
                     setleaveScribble();
                     surfaceDraw(9);
                     canDraw = true;
+                    if (myScriptDrawListener != null) myScriptDrawListener.onRubber(thisPenUtils().deleteLines);
                 }
                 break;
         }
