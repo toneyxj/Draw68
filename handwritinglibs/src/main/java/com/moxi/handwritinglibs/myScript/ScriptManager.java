@@ -51,10 +51,6 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      */
     private CodeAndIndex codeAndIndex;
     public String savename;
-    /**
-     * 引擎最新引用状态，0：保存，1切换界面，2翻译手写
-     */
-    private int engControlType = -1;
 
     private ScriptCallBack callBack;
     private List<PointerEvent> pointerEvents;
@@ -134,12 +130,16 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
             callBack.saveResult();
             return;
         }
-        if (scriptService.isIdle()) {
-            scriptService.savePacke();
-            callBack.saveResult();
-        } else {
-            engControlType = 0;
-        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (!scriptService.getEditor().isIdle()) {
+                    scriptService.getEditor().waitForIdle();
+                }
+                scriptService.savePacke();
+                callBack.saveResult();
+            }
+        }).start();
     }
 
     /**
@@ -150,21 +150,23 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
     public boolean getTransformTxt() {
         APPLog.e("existJiix", existJiix);
         if (!existJiix) {
-            engControlType = 2;
             return false;
         }
-        APPLog.e("scriptService.isIdle()", scriptService.isIdle());
-        if (scriptService.isIdle()) {
-            try {
-                if (callBack != null) callBack.transformReuslit(scriptService.change());
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!scriptService.getEditor().isIdle()) {
+                        scriptService.getEditor().waitForIdle();
+                    }
+                    if (callBack != null) callBack.transformReuslit(scriptService.change());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
-        } else {
-            engControlType = 2;
-        }
+        }).start();
         return true;
     }
 
@@ -179,6 +181,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
             if (callBack != null) callBack.transformReuslit("");
             return;
         }
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -199,6 +202,11 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
                     for (int i = 0; i < size; i++) {
                         addCoordinate(data.mainLines.get(i));
                     }
+                    if (!scriptService.getEditor().isIdle()) {
+                        scriptService.getEditor().waitForIdle();
+                    }
+                    existJiix=true;
+                    if (callBack != null) callBack.transformReuslit(scriptService.change());
                     APPLog.e("scriptManager-inertend", System.currentTimeMillis());
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -342,38 +350,38 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
         } catch (Exception e) {
             APPLog.e("contentChanged", e.getMessage());
         }
+//
+//        APPLog.e("engControlType", engControlType);
+////        if (scriptService.isIdle()) {
+//        switch (engControlType) {
+//            case 0://保存
+//            case 1://切换界面
+//                if (existJiix) {
+//                    saveJiix();
+//                } else {
+//                    setExistJiix(true);
+//                    callBack.saveResult();
+//                }
+//                break;
+//            case 2://翻译手写内容
+//                if (existJiix) {
+//                    getTransformTxt();
+//                } else {
+//                    setExistJiix(true);
+//                    if (callBack != null) {
+//                        try {
+//                            callBack.transformReuslit(scriptService.change());
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        } catch (JSONException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
 
-        APPLog.e("engControlType", engControlType);
-//        if (scriptService.isIdle()) {
-        switch (engControlType) {
-            case 0://保存
-            case 1://切换界面
-                if (existJiix) {
-                    saveJiix();
-                } else {
-                    setExistJiix(true);
-                    callBack.saveResult();
-                }
-                break;
-            case 2://翻译手写内容
-                if (existJiix) {
-                    getTransformTxt();
-                } else {
-                    setExistJiix(true);
-                    if (callBack != null) {
-                        try {
-                            callBack.transformReuslit(scriptService.change());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
 
-
-                break;
-        }
+//                break;
+//        }
 //        }
     }
 
