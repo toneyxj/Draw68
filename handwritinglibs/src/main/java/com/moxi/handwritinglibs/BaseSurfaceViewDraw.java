@@ -323,6 +323,7 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
     public void deleteiink(){
         if (scriptManager!=null)
             scriptManager.deleteiink();
+        scriptManager.existJiix=true;
     }
 
     @Override
@@ -348,6 +349,9 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
     public void onRubber(List<WLine> lines) {
         scriptManager.clear();
         scriptManager.deleteiink();
+        if(getPenControl().getNoPageData().dataNull()){
+
+        }
         scriptManager.existJiix=false;
 //        scriptManager.clear();
 //        scriptManager.addCoordinate(getPenControl().getNoPageData(),false);
