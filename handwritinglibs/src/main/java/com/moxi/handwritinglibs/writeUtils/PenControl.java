@@ -122,6 +122,7 @@ public class PenControl implements View.OnTouchListener {
 
     public void setMyScriptDrawListener(MyScriptDrawListener listener) {
         myScriptDrawListener = listener;
+        thisPenUtils().setMyScriptDrawListener(listener);
     }
 
 

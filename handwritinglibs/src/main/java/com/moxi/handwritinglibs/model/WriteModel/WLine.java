@@ -80,6 +80,17 @@ public class WLine {
     public void isNull(){
 //        wRect=null;
     }
+    
+    public Path getPath(){
+        if (points==null||points.size()<=1)return new Path();
+        Path path=new Path();
+        int size=points.size();
+        path.moveTo(points.get(0).x,points.get(0).y);
+        for (int i = 0; i < size; i++) {
+            path.lineTo(points.get(i).x,points.get(i).y);
+        }
+        return path;
+    }
 
     /**
      * 线绘制到画布上面

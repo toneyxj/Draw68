@@ -2,6 +2,7 @@ package com.moxi.handwritinglibs.myScript;
 
 import android.app.Application;
 import android.content.Context;
+import android.graphics.RectF;
 import android.util.Base64;
 import android.view.MotionEvent;
 import android.widget.Toast;
@@ -16,7 +17,10 @@ import com.moxi.handwritinglibs.model.WriteModel.WLine;
 import com.moxi.handwritinglibs.model.WriteModel.WMoreLine;
 import com.moxi.handwritinglibs.model.WriteModel.WPoint;
 import com.moxi.handwritinglibs.model.WriteModel.WritePageData;
+import com.moxi.handwritinglibs.myScript.utils.JiixForChars;
+import com.moxi.handwritinglibs.myScript.utils.PathCounter;
 import com.moxi.handwritinglibs.utils.JiixLoaderManager;
+import com.moxi.handwritinglibs.writeUtils.PathUtils;
 import com.mx.mxbase.base.MyApplication;
 import com.mx.mxbase.constant.APPLog;
 import com.mx.mxbase.utils.Base64Utils;
@@ -54,6 +58,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
 
     private ScriptCallBack callBack;
     private List<PointerEvent> pointerEvents;
+    private PathCounter pathCounter;
 
     public void setCallBack(ScriptCallBack callBack) {
         this.callBack = callBack;
@@ -84,6 +89,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
         clear();
         this.codeAndIndex = codeAndIndex;
         //获取文件列外项目
+        pathCounter = null;
 
         WritPadModel model = WritePadUtils.getInstance().getWritPadModel(codeAndIndex.saveCode, codeAndIndex.index);
         APPLog.e("setCodeAndIndex-model", model);
@@ -102,6 +108,82 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
     }
 
     /**
+     * 注入当前删除的线并且判断可以得到的矩形框
+     *
+     * @param list
+     */
+    public void onCurRubberLine(List<WLine> list) {
+        if (!existJiix) return;
+        if (pathCounter == null) {
+            try {
+                JiixForChars jiixForChars = scriptService.getJiixForChars();
+                pathCounter = new PathCounter(jiixForChars.getChars(), scriptService.getTransform());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (pathCounter == null) return;
+        pathCounter.judegDeleteRect(list);
+    }
+
+    public void onRubber(final WritePageData data, final List<WLine> lines) {
+        if (!existJiix) return;
+        if (lines == null || lines.size() == 0) return;
+        if (pathCounter != null) {
+            if (pathCounter.deleteCharsList != null || pathCounter.deleteCharsList.size() > 0) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        APPLog.e("开始时间",System.currentTimeMillis());
+                        try {
+                            List<WLine> draws=new ArrayList<WLine>();
+                            List<RectF> rfs = pathCounter.deleteCharsList;
+                            for (RectF rf : rfs) {
+                                int is = data.drawMiddleLines.size();
+                                for (int i = 0; i < is; i++) {
+                                    WMoreLine mline = data.drawMiddleLines.get(i);
+//                        PointerType type=mline.isLineStatus()?PointerType.PEN:PointerType.ERASER;
+//                        APPLog.e("这里的进入",type);
+                                    if (mline.status == 0) {
+                                        int i1s = mline.MoreLines.size();
+                                        for (int i1 = 0; i1 < i1s; i1++) {
+                                            WLine line=mline.MoreLines.get(i1);
+                                            if (PathUtils.getPathIntersect(rf,line)){
+                                                draws.add(line);
+                                            }
+
+                                        }
+                                    }
+                                }
+                                int size = data.mainLines.size();
+                                for (int i = 0; i < size; i++) {
+                                    WLine line=data.mainLines.get(i);
+                                    if (PathUtils.getPathIntersect(rf,line)){
+                                        draws.add(line);
+                                    }
+                                }
+                            }
+                            if (!scriptService.getEditor().isIdle()) {
+                                scriptService.getEditor().waitForIdle();
+                            }
+                            existJiix = true;
+                            DrawLine(lines,false);
+                            APPLog.e("draws",draws.size());
+                            DrawLine(draws,true);
+                            APPLog.e("绘制时间",System.currentTimeMillis());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }).start();
+
+            }
+        }
+
+    }
+
+    /**
      * 获取jiix文件保存路径
      *
      * @return
@@ -111,10 +193,10 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
     }
 
     public void deleteiink() {
-        if (!existJiix)return;
+        if (!existJiix) return;
         String path = getScriptSavePath();
         scriptService.delete(context, codeAndIndex.saveCode, path);
-        savename=System.currentTimeMillis()+"";
+        savename = System.currentTimeMillis() + "";
     }
 
     public void loadJiix() {
@@ -175,13 +257,12 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      *
      * @param data
      */
-    public void addCoordinate(final WritePageData data,boolean isTan) {
+    public void addCoordinate(final WritePageData data, boolean isTan) {
         if (data.dataNull()) {
             if (isTan)
-            if (callBack != null) callBack.transformReuslit("");
+                if (callBack != null) callBack.transformReuslit("");
             return;
         }
-
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -205,7 +286,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
                     if (!scriptService.getEditor().isIdle()) {
                         scriptService.getEditor().waitForIdle();
                     }
-                    existJiix=true;
+                    existJiix = true;
                     if (callBack != null) callBack.transformReuslit(scriptService.change());
                     APPLog.e("scriptManager-inertend", System.currentTimeMillis());
                 } catch (Exception e) {
@@ -217,28 +298,14 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
 
     }
 
-    public void deleteLine(final List<WLine> lines) {
+    public void DrawLine(final List<WLine> lines, final boolean is) {
+        if (!existJiix) return;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                for (WLine line:lines) {
+                for (WLine line : lines) {
                     try {
-                        addCoordinate(line, PointerType.ERASER);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
-    }
-    public void DrawLine(final List<WLine> lines) {
-        if (!existJiix)return;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                for (WLine line:lines) {
-                    try {
-                        addCoordinate(line, PointerType.ERASER);
+                        addCoordinate(line, is?PointerType.PEN:PointerType.ERASER);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -253,7 +320,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
     }
 
     private void addCoordinate(WLine line, PointerType type) throws Exception {
-        APPLog.e("PointerType",type);
+        APPLog.e("PointerType", type);
         if (line == null || line.getPoints().size() < 3) return;
         List<WPoint> lines = line.getPoints();
         int size = lines.size();
@@ -304,6 +371,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      * @param eventList
      */
     public void pointerEvents(List<PointerEvent> eventList) {
+        pathCounter = null;
         APPLog.e("pointerEvents=" + eventList.size(), existJiix);
         if (existJiix) {
             if (eventList != null && eventList.size() > 0) {
@@ -350,39 +418,6 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
         } catch (Exception e) {
             APPLog.e("contentChanged", e.getMessage());
         }
-//
-//        APPLog.e("engControlType", engControlType);
-////        if (scriptService.isIdle()) {
-//        switch (engControlType) {
-//            case 0://保存
-//            case 1://切换界面
-//                if (existJiix) {
-//                    saveJiix();
-//                } else {
-//                    setExistJiix(true);
-//                    callBack.saveResult();
-//                }
-//                break;
-//            case 2://翻译手写内容
-//                if (existJiix) {
-//                    getTransformTxt();
-//                } else {
-//                    setExistJiix(true);
-//                    if (callBack != null) {
-//                        try {
-//                            callBack.transformReuslit(scriptService.change());
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        } catch (JSONException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }
-
-
-//                break;
-//        }
-//        }
     }
 
     @Override

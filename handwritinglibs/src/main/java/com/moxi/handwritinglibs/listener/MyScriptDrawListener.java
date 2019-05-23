@@ -10,5 +10,17 @@ import java.util.List;
  */
 public interface MyScriptDrawListener {
     void onPenEvents(List<PointerEvent> datas);
+
+    /**
+     * up后删除的总线
+     * @param lines 线段集合
+     */
     void onRubber(List<WLine> lines);
+
+    /**
+     * 当前正在删除的线
+     * @param list
+     */
+    void onCurRubberLine(List<WLine> list);
+
 }

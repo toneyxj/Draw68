@@ -15,6 +15,6 @@ public class WriteNoteApplication extends MyApplication {
 //        CrashReport.initCrashReport(getApplicationContext(), "a5ffb16b07", APPLog.is);
         IndexDbUtils.getInstance().initDb(getApplicationContext());
         UserInformation.getInstance().initUserInfor(getInstance());
-//        ErrorActivity.installHandler(this);
+        ErrorActivity.installHandler(this);
     }
 }

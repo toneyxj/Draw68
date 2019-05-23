@@ -10,6 +10,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.google.gson.Gson;
+import com.moxi.handwritinglibs.listener.MyScriptDrawListener;
 import com.moxi.handwritinglibs.model.WriteModel.WLine;
 import com.moxi.handwritinglibs.model.WriteModel.WMoreLine;
 import com.moxi.handwritinglibs.model.WriteModel.WPoint;
@@ -26,6 +27,7 @@ import java.util.List;
 
 public class PenUtils {
     private WritePageData pageData;
+    private MyScriptDrawListener listener;
     /**
      * 中间保存单条线的类
      */
@@ -36,6 +38,9 @@ public class PenUtils {
      */
     private int backOrLastIndex = 0;
     private long drawSize=0;
+    public void setMyScriptDrawListener(MyScriptDrawListener listener){
+        this.listener=listener;
+    }
 
     /**
      * 空数据初始化
@@ -148,6 +153,7 @@ public List<WLine> deleteLines=new ArrayList<WLine>();
         cutSaveData();
         deleteLines.addAll(lines);
         pageData.drawMiddleLines.add(new WMoreLine(lines, 1));
+        if (listener!=null)listener.onCurRubberLine(lines);
     }
 
     /**

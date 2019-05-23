@@ -216,8 +216,9 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
         getPenControl().refureshWindows(false);
         if (line!=null){
             if (line.isLineStatus()){
-                scriptManager.DrawLine(line.getMoreLines());
+                scriptManager.DrawLine(line.getMoreLines(),true);
             }else {
+                onCurRubberLine(line.getMoreLines());
                 onRubber(line.getMoreLines());
             }
         }
@@ -347,14 +348,20 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
 
     @Override
     public void onRubber(List<WLine> lines) {
-        scriptManager.clear();
-        scriptManager.deleteiink();
-        if(getPenControl().getNoPageData().dataNull()){
-
-        }
-        scriptManager.existJiix=false;
+//        scriptManager.clear();
+//        scriptManager.deleteiink();
+//        if(getPenControl().getNoPageData().dataNull()){
+//
+//        }
+//        scriptManager.existJiix=false;
 //        scriptManager.clear();
 //        scriptManager.addCoordinate(getPenControl().getNoPageData(),false);
 //        scriptManager.deleteiink();
+        scriptManager.onRubber(getPenControl().getNoPageData(),lines);
+    }
+
+    @Override
+    public void onCurRubberLine(List<WLine> list) {
+        scriptManager.onCurRubberLine(list);
     }
 }
