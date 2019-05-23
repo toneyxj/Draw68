@@ -9,6 +9,7 @@ import com.moxi.handwritinglibs.myScript.utils.FontMetricsProvider;
 import com.moxi.handwritinglibs.myScript.utils.JiixForChars;
 import com.moxi.handwritinglibs.utils.StringUtils;
 import com.mx.mxbase.constant.APPLog;
+import com.mx.mxbase.utils.ToastUtils;
 import com.myscript.iink.Configuration;
 import com.myscript.iink.ContentPackage;
 import com.myscript.iink.ContentPart;
@@ -45,41 +46,44 @@ public class MyScriptService {
     }
 
     public void init(float dpiX, float dpiY, Context context) {
-        engine = IInkApplication.getEngine();
-        Configuration conf = engine.getConfiguration();
-        String confDir = "zip://" + context.getPackageCodePath() + "!/assets/conf";
-        conf.setStringArray("configuration-manager.search-path", new String[]{confDir});
-        String tempDir = context.getFilesDir().getPath() + File.separator + "tmp";
-        conf.setString("content-package.temp-folder", tempDir);
+        try {
+            engine = IInkApplication.getEngine();
+            Configuration conf = engine.getConfiguration();
+            String confDir = "zip://" + context.getPackageCodePath() + "!/assets/conf";
+            conf.setStringArray("configuration-manager.search-path", new String[]{confDir});
+            String tempDir = context.getFilesDir().getPath() + File.separator + "tmp";
+            conf.setString("content-package.temp-folder", tempDir);
 
-        conf.setString("lang", "zh_CN");
+            conf.setString("lang", "zh_CN");
 
 
-        conf.setNumber("text.margin.top", 0);
-        conf.setNumber("text.margin.left", 0);
-        conf.setNumber("text.margin.right", 0);
+            conf.setNumber("text.margin.top", 0);
+            conf.setNumber("text.margin.left", 0);
+            conf.setNumber("text.margin.right", 0);
 
-        // Configure the engine to disable guides (recommended)
-        //配置引擎以禁用指南（推荐）
-        engine.getConfiguration().setBoolean("text.guides.enable", false);
+            // Configure the engine to disable guides (recommended)
+            //配置引擎以禁用指南（推荐）
+            engine.getConfiguration().setBoolean("text.guides.enable", false);
 
-        // Create a renderer with a null render target
-        //使用null渲染目标创建渲染器
+            // Create a renderer with a null render target
+            //使用null渲染目标创建渲染器
 //        float dpiX = 300;
 //        float dpiY = 800;
-        Renderer renderer = engine.createRenderer(dpiX, dpiY, null);
+            Renderer renderer = engine.createRenderer(dpiX, dpiY, null);
 
-        // Create the editor
-        //创建编辑器
-        editor = engine.createEditor(renderer);
+            // Create the editor
+            //创建编辑器
+            editor = engine.createEditor(renderer);
 
-        // The editor requires a font metrics provider and a view size *before* calling setPart()
-        //在调用setPart（）之前，编辑器需要字体度量提供程序和视图大小*
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        Map<String, Typeface> typefaceMap = new HashMap<String, Typeface>();
-        editor.setFontMetricsProvider(new FontMetricsProvider(displayMetrics, typefaceMap));
-        editor.setViewSize((int) dpiX, (int) dpiY);
-
+            // The editor requires a font metrics provider and a view size *before* calling setPart()
+            //在调用setPart（）之前，编辑器需要字体度量提供程序和视图大小*
+            DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+            Map<String, Typeface> typefaceMap = new HashMap<String, Typeface>();
+            editor.setFontMetricsProvider(new FontMetricsProvider(displayMetrics, typefaceMap));
+            editor.setViewSize((int) dpiX, (int) dpiY);
+        }catch (Exception e){
+            ToastUtils.getInstance().showToastShort("初始化myScript引擎失败！！");
+        }
     }
 
     public boolean setPackage(Context context,String midr,String name){
