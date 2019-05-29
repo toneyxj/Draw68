@@ -113,6 +113,7 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
      * @param list
      */
     public void onCurRubberLine(List<WLine> list) {
+        getIdle();
         if (!existJiix) return;
         if (pathCounter == null) {
             try {
@@ -222,6 +223,16 @@ public class ScriptManager implements IEditorListener2, JiixLodingListener {
                 callBack.saveResult();
             }
         }).start();
+    }
+
+    /**
+     * 翻译引擎是否处于空闲状态
+     * @return
+     */
+    public void getIdle() {
+        if (!scriptService.getEditor().isIdle()) {
+            scriptService.getEditor().waitForIdle();
+        }
     }
 
     /**

@@ -280,6 +280,28 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
                     getHandler().removeCallbacks(runnable);
                 }
             }
+
+            @Override
+            public void showDialog() {
+                APPLog.e("showDialog");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        dialogShowOrHide(true,"");
+                    }
+                });
+            }
+
+            @Override
+            public void hideDialog() {
+                APPLog.e("hideDialog");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        dialogShowOrHide(false,"");
+                    }
+                });
+            }
         });
 
     }

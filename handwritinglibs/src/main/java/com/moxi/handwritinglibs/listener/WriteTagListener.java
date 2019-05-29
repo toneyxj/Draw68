@@ -6,4 +6,6 @@ package com.moxi.handwritinglibs.listener;
 
 public interface WriteTagListener {
     void WriteTag(boolean isDrawing,String tag);
+    void showDialog();
+    void hideDialog();
 }

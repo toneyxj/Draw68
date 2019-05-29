@@ -41,6 +41,7 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
         this.tagListener = tagListener;
         if (getPenControl() == null) return;
         getPenControl().tagListener = this.tagListener;
+
     }
 
     public void setStartActivity(boolean startActivity) {
@@ -348,15 +349,6 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
 
     @Override
     public void onRubber(List<WLine> lines) {
-//        scriptManager.clear();
-//        scriptManager.deleteiink();
-//        if(getPenControl().getNoPageData().dataNull()){
-//
-//        }
-//        scriptManager.existJiix=false;
-//        scriptManager.clear();
-//        scriptManager.addCoordinate(getPenControl().getNoPageData(),false);
-//        scriptManager.deleteiink();
         scriptManager.onRubber(getPenControl().getNoPageData(),lines);
     }
 

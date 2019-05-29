@@ -4,19 +4,26 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.view.MotionEvent;
 import android.view.View;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.google.gson.Gson;
+import com.moxi.handwritinglibs.listener.DeleteLineListener;
 import com.moxi.handwritinglibs.listener.MyScriptDrawListener;
+import com.moxi.handwritinglibs.listener.WriteTagListener;
+import com.moxi.handwritinglibs.model.DeletePointManager;
 import com.moxi.handwritinglibs.model.WriteModel.WLine;
 import com.moxi.handwritinglibs.model.WriteModel.WMoreLine;
 import com.moxi.handwritinglibs.model.WriteModel.WPoint;
 import com.moxi.handwritinglibs.model.WriteModel.WritePageData;
 import com.moxi.handwritinglibs.utils.GZIP;
 import com.mx.mxbase.constant.APPLog;
+import com.myscript.iink.PointerEvent;
+import com.myscript.iink.PointerEventType;
+import com.myscript.iink.PointerType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +45,12 @@ public class PenUtils {
      */
     private int backOrLastIndex = 0;
     private long drawSize=0;
+    public DeleteLineListener tagListener;
+
+    public void setTagListener(DeleteLineListener tagListener) {
+        this.tagListener = tagListener;
+    }
+
     public void setMyScriptDrawListener(MyScriptDrawListener listener){
         this.listener=listener;
     }
@@ -240,10 +253,50 @@ public List<WLine> deleteLines=new ArrayList<WLine>();
      * @param x
      * @param y
      */
-    public void deleteData(float x, float y, int lineWidth) {
+    public void deleteData(int acion ,float x, float y, int lineWidth) {
+
+        DeletePointManager.getInstall().deleteData(acion,x,y,lineWidth);
+        APPLog.e("deleteData",acion);
+        switch (acion) {
+            case MotionEvent.ACTION_DOWN:
+                startDelete();
+                break;
+            case MotionEvent.ACTION_UP:
+                APPLog.e("tagListener",tagListener==null);
+                if (tagListener!=null)
+                tagListener.onDeleteUp();
+                break;
+                default:break;
+        }
+    }
+
+    private void startDelete(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!DeletePointManager.getInstall().deleteUp()) {
+                    WPoint point = DeletePointManager.getInstall().getFirstPoint();
+                    if (point != null) {
+                        deleteData(point.x, point.y);
+                    } else {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                APPLog.e("tagListener11",tagListener==null);
+                if (tagListener!=null)
+                tagListener.onDeleteSucess();
+            }
+        }).start();
+    }
+
+    public void deleteData(float x, float y) {
         nullInit();
         List<WLine> deleteLines = new ArrayList<WLine>();
-        int mi = lineWidth / 2;
+        int mi = DeletePointManager.getInstall().deletelineWidth / 2;
         RectF rectF = new RectF();
         rectF.set(x - mi, y - mi, x + mi, y + mi);
 

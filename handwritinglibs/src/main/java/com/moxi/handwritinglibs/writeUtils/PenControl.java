@@ -1,5 +1,7 @@
 package com.moxi.handwritinglibs.writeUtils;
 
+import android.app.AppOpsManager;
+import android.app.Application;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -13,6 +15,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.xrz.Xrzhandwrite;
 
+import com.moxi.handwritinglibs.listener.DeleteLineListener;
 import com.moxi.handwritinglibs.listener.MyScriptDrawListener;
 import com.moxi.handwritinglibs.listener.WindowRefureshListener;
 import com.moxi.handwritinglibs.listener.WriteTagListener;
@@ -247,8 +250,32 @@ public class PenControl implements View.OnTouchListener {
 
     public PenUtils thisPenUtils() {
         if (pageData == null) pageData = new PenUtils();
+        pageData.setTagListener(deleteLineListener);
         return pageData;
     }
+
+    private DeleteLineListener deleteLineListener = new DeleteLineListener() {
+        @Override
+        public void onDeleteUp() {
+            setleaveScribble();
+            if (tagListener != null) tagListener.showDialog();
+        }
+
+        @Override
+        public void onDeleteSucess() {
+            if (tagListener != null) tagListener.hideDialog();
+            if (myScriptDrawListener != null)
+                myScriptDrawListener.onRubber(thisPenUtils().deleteLines);
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    setleaveScribble();
+                    surfaceDraw(9);
+                    canDraw = true;
+                }
+            });
+        }
+    };
 
     public void setCross(boolean cross) {
         isCross = cross;
@@ -374,7 +401,7 @@ public class PenControl implements View.OnTouchListener {
 
                 if (!isDrawLine) {
                     thisPenUtils().newDelete();
-                    setDeleteRect(event, eventX, eventY);
+                    setDeleteRect(MotionEvent.ACTION_DOWN, eventX, eventY);
                 } else {
                     eventList = new ArrayList<PointerEvent>();
                     eventList.add(new PointerEvent(PointerEventType.DOWN, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
@@ -401,7 +428,7 @@ public class PenControl implements View.OnTouchListener {
                     pointDraw(eventX, eventY, false, lastPressure);
                     movePoint(eventX, eventY);
                 } else {
-                    setDeleteRect(event, eventX, eventY);
+                    setDeleteRect(MotionEvent.ACTION_MOVE, eventX, eventY);
                 }
                 break;
             case MotionEvent.ACTION_POINTER_UP:
@@ -422,12 +449,9 @@ public class PenControl implements View.OnTouchListener {
                     if (myScriptDrawListener != null) myScriptDrawListener.onPenEvents(eventList);
                 } else {//启动删除
                     canDraw = false;
-                    setDeleteRect(event, eventX, eventY);
+                    setDeleteRect(MotionEvent.ACTION_UP, eventX, eventY);
                     deletePoint.setPoint(-1, -1);
-                    setleaveScribble();
-                    surfaceDraw(9);
-                    canDraw = true;
-                    if (myScriptDrawListener != null) myScriptDrawListener.onRubber(thisPenUtils().deleteLines);
+
                 }
                 break;
         }
@@ -442,9 +466,9 @@ public class PenControl implements View.OnTouchListener {
             //通知转换
             if (myScriptDrawListener != null) myScriptDrawListener.onPenEvents(eventList);
             //同时线作为起始点
-            eventList=new ArrayList<PointerEvent>();
+            eventList = new ArrayList<PointerEvent>();
             eventList.add(new PointerEvent(PointerEventType.DOWN, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
-        }else {
+        } else {
             eventList.add(new PointerEvent(PointerEventType.MOVE, eventX, eventY, NO_TIMESTAMP, NO_PRESSURE, PointerType.PEN, NO_POINTER_ID));
         }
     }
@@ -473,12 +497,12 @@ public class PenControl implements View.OnTouchListener {
      * @param x
      * @param y
      */
-    private void setDeleteRect(MotionEvent event, float x, float y) {
-        if (deletePoint.x != -1 && Math.abs(x - deletePoint.x) < deleteLineWidth && Math.abs(y - deletePoint.y) < deleteLineWidth) {
+    private void setDeleteRect(int event, float x, float y) {
+        if (event!=MotionEvent.ACTION_UP&&deletePoint.x != -1 && Math.abs(x - deletePoint.x) < deleteLineWidth && Math.abs(y - deletePoint.y) < deleteLineWidth) {
             return;
         }
         deletePoint.setPoint(x, y);
-        thisPenUtils().deleteData(x, y + scroolY, deleteLineWidth);
+        thisPenUtils().deleteData(event, x, y + scroolY, deleteLineWidth);
         List<WPoint> points = thisPenUtils().getDeletePoint(x, y, deleteLineWidth);
         if (points.size() <= 0) return;
         int index = 1;
@@ -487,7 +511,6 @@ public class PenControl implements View.OnTouchListener {
         for (int i = index; i < points.size(); i++) {
             pointDraw(points.get(i).x, points.get(i).y, false, 0);
         }
-//        doubleDraw(null, false,true);
     }
 
     private float lastPressure = 0;
