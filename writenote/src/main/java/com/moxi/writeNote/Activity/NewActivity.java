@@ -104,7 +104,7 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
     TextView title;
 
     @Bind(R.id.change_to_text)
-    TextView change_to_text;
+    ImageButton change_to_text;
     @Bind(R.id.save_write)
     ImageButton save_write;
     @Bind(R.id.back_last)
@@ -112,7 +112,7 @@ public class NewActivity extends WriteBaseActivity implements View.OnClickListen
     @Bind(R.id.recover_next)
     ImageButton recover_next;
     @Bind(R.id.screen_light_adjust)//屏幕亮度调节
-            ImageButton screen_light_adjust;
+     ImageButton screen_light_adjust;
     @Bind(R.id.refuresh)
     ImageButton refuresh;
     @Bind(R.id.ash_can)

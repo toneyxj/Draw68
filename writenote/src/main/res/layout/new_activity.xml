@@ -40,14 +40,14 @@
             android:textColor="@color/colorBlack"
             android:textSize="@dimen/moxi_text_size_24"
             android:textStyle="bold" />
-        <TextView
+        <ImageButton
             android:id="@+id/change_to_text"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="@drawable/white_to_font"
             android:gravity="center"
-            android:padding="10dp"
-            android:text="转换"
+            android:padding="12dp"
+            android:src="@mipmap/zhuanwenzi"
             android:textColor="@color/colorBlack"
             android:textSize="@dimen/title_right_size" />
         <ImageButton

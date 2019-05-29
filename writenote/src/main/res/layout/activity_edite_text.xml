@@ -34,29 +34,29 @@
             android:textColor="@color/colorBlack"
             android:textSize="@dimen/title_size"
             android:textStyle="bold" />
-        <TextView
+        <ImageButton
             android:id="@+id/share"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="@drawable/white_to_font"
-            android:padding="10dp"
+            android:padding="14dp"
             android:layout_toLeftOf="@+id/save_txt"
             android:layout_centerVertical="true"
             android:gravity="center_vertical"
-            android:text="分享"
+            android:src="@mipmap/tongbubiji"
             android:textSize="@dimen/title_right_size"
             android:textColor="@color/colorBlack"
             android:textStyle="bold" />
-        <TextView
+        <ImageButton
             android:id="@+id/save_txt"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:background="@drawable/white_to_font"
-            android:padding="10dp"
+            android:padding="14dp"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:gravity="center_vertical"
-            android:text="保存"
+            android:src="@mipmap/save_write"
             android:textSize="@dimen/title_right_size"
             android:textColor="@color/colorBlack"
             android:textStyle="bold" />
