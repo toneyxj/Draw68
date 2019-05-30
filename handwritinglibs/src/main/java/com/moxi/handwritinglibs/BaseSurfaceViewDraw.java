@@ -219,8 +219,16 @@ public class BaseSurfaceViewDraw extends SurfaceView implements SurfaceHolder.Ca
             if (line.isLineStatus()){
                 scriptManager.DrawLine(line.getMoreLines(),true);
             }else {
-                onCurRubberLine(line.getMoreLines());
-                onRubber(line.getMoreLines());
+                final WMoreLine finalLine = line;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tagListener.showDialog();
+                        onCurRubberLine(finalLine.getMoreLines());
+                        onRubber(finalLine.getMoreLines());
+                        tagListener.hideDialog();
+                    }
+                }).start();
             }
         }
     }
